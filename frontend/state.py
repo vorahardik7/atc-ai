@@ -50,45 +50,34 @@ class State(rx.State):
 
         # Yield here to clear the frontend input before continuing.
         yield
-        # XXX: Uncomment this to use the agentic workflow
-        # client = httpx.AsyncClient()
 
-        # # call the agentic workflow
-        # input_payload = {
-        #     "chat_history_dicts": chat_history_dicts,
-        #     "user_input": question,
-        # }
-        # deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
-        # apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
-        # response = await client.post(
-        #     f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
-        #     json={"input": json.dumps(input_payload)},
-        #     timeout=60,
-        # )
-        # answer = response.text
-
-        # for i in range(len(answer)):
-        #     # Pause to show the streaming effect.
-        #     await asyncio.sleep(0.01)
-        #     # Add one letter at a time to the output.
-        #     self.chat_history[-1] = (
-        #         self.chat_history[-1][0],
-        #         answer[: i + 1],
-        #     )
-        #     yield
         
-        # XXX: Remove this to use the agentic workflow
-        client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        session = await client.chat.completions.create(
-            model="gpt-4o-mini",  # Changed to a valid model name
-            messages=[
-                *chat_history_dicts,  # Include chat history
-                {"role": "user", "content": question}  # Use the stored question
-            ],
-            stop=None,
-            temperature=0.7,
-            stream=True,
+        client = httpx.AsyncClient()
+
+        # call the agentic workflow
+        input_payload = {
+            "chat_history_dicts": chat_history_dicts,
+            "user_input": question,
+        }
+        deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
+        apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
+        response = await client.post(
+            f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
+            json={"input": json.dumps(input_payload)},
+            timeout=60,
         )
+        answer = response.text
+
+        for i in range(len(answer)):
+            # Pause to show the streaming effect.
+            await asyncio.sleep(0.01)
+            # Add one letter at a time to the output.
+            self.chat_history[-1] = (
+                self.chat_history[-1][0],
+                answer[: i + 1],
+            )
+            yield
+        
 
         # Add to the answer as the chatbot responds.
         answer = ""
