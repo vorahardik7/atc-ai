@@ -11,7 +11,7 @@ def color_item(color: str) -> rx.Component:
             rx.cond(
                 SettingsState.color == color,
                 rx.icon(
-                    tag="check", size=13, stroke_width="2.5", class_name="!text-white"
+                    tag="check", size=13, stroke_width="2.5", color="white"
                 ),
                 rx.fragment(),
             ),
