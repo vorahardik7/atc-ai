@@ -1,17 +1,11 @@
 import asyncio
-import json
-import os
 import uuid
 
-import httpx
 import reflex as rx
-from openai import AsyncOpenAI
 
 class SettingsState(rx.State):
-    # The accent color for the app
     color: str = "violet"
 
-    # The font family for the app
     font_family: str = "Poppins"
 
 
@@ -32,7 +26,7 @@ class State(rx.State):
         self.processing = True
         yield
 
-        # convert chat history to a list of dictionaries
+        # Convert chat history to a list of dictionaries for any future use
         chat_history_dicts = []
         for chat_history_tuple in self.chat_history:
             chat_history_dicts.append(
@@ -42,61 +36,28 @@ class State(rx.State):
                 {"role": "assistant", "content": chat_history_tuple[1]}
             )
 
+        # Append the current question with an empty answer initially.
         self.chat_history.append((self.question, ""))
 
-        # Clear the question input.
+        # Clear the question input and reset it for the UI.
         question = self.question
         self.question = ""
+        yield  # Yield here to clear the frontend input before continuing.
 
-        # Yield here to clear the frontend input before continuing.
-        yield
-
-        
-        client = httpx.AsyncClient()
-
-        # call the agentic workflow
-        input_payload = {
-            "chat_history_dicts": chat_history_dicts,
-            "user_input": question,
-        }
-        deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
-        apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
-        response = await client.post(
-            f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
-            json={"input": json.dumps(input_payload)},
-            timeout=60,
-        )
-        answer = response.text
+        # Generate the response "I don't know!"
+        answer = "I don't know!"
 
         for i in range(len(answer)):
             # Pause to show the streaming effect.
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.1)  # Short pause to simulate typing
             # Add one letter at a time to the output.
             self.chat_history[-1] = (
                 self.chat_history[-1][0],
-                answer[: i + 1],
+                answer[:i + 1],
             )
             yield
-        
 
-        # Add to the answer as the chatbot responds.
-        answer = ""
-        yield
-
-        async for item in session:
-            if hasattr(item.choices[0].delta, "content"):
-                if item.choices[0].delta.content is None:
-                    break
-                answer += item.choices[0].delta.content
-                self.chat_history[-1] = (self.chat_history[-1][0], answer)
-                yield
-
-        # Ensure the final answer is added to chat history
-        if answer:
-            self.chat_history[-1] = (self.chat_history[-1][0], answer)
-            yield
-
-        # Set the processing state to False.
+        # Set the processing state to False after finishing the response.
         self.processing = False
 
     async def handle_key_down(self, key: str):
@@ -108,3 +69,4 @@ class State(rx.State):
         # Reset the chat history and processing state
         self.chat_history = []
         self.processing = False
+
